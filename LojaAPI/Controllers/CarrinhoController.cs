@@ -11,12 +11,21 @@ namespace LojaAPI.Controllers
 {
     public class CarrinhoController : ApiController
     {
-        public Carrinho Get(int id)
+        public HttpResponseMessage Get(int id)
         {
-            CarrinhoDAO dao = new CarrinhoDAO();
-            Carrinho carrinho = dao.Busca(id);
+            try
+            {
+                CarrinhoDAO dao = new CarrinhoDAO();
+                Carrinho carrinho = dao.Busca(id);
+                return Request.CreateResponse(HttpStatusCode.OK, carrinho);
+            }
+            catch (KeyNotFoundException)
+            {
+                string message = string.Format("O carrinho {0} não foi encontrado", id);
+                HttpError error = new HttpError(message);
+                return Request.CreateResponse(HttpStatusCode.NotFound, error);
+            }
 
-            return carrinho;
         }
 
         // forca ser o retorno em XML
@@ -28,14 +37,34 @@ namespace LojaAPI.Controllers
         //    return carrinho.ToXml();
         //}
 
-        public string Post([FromBody]Carrinho carrinho)
+        public HttpResponseMessage Post([FromBody]Carrinho carrinho)
         {
             CarrinhoDAO dao = new CarrinhoDAO();
             dao.Adiciona(carrinho);
-            return "Sucesso!";
+
+            HttpResponseMessage response = Request.CreateResponse(HttpStatusCode.Created);
+            string location = Url.Link("DefaultApi", new { controller = "carrinho", id = carrinho.Id });
+            response.Headers.Location = new Uri(location);
+
+            return response;
         }
 
+        //public string Post([FromBody]Carrinho carrinho)
+        //{
+        //    CarrinhoDAO dao = new CarrinhoDAO();
+        //    dao.Adiciona(carrinho);
+        //    return "Sucesso!";
+        //}
 
+        [Route("api/carrinho/{idCarrinho}/produto/{idProduto}")]
+        public HttpResponseMessage Delete([FromUri]int idCarrinho, [FromUri]int idProduto)
+        {
+            CarrinhoDAO dao = new CarrinhoDAO();
+            Carrinho carrinho = dao.Busca(idCarrinho);
+            carrinho.Remove(idProduto);
+
+            return Request.CreateResponse(HttpStatusCode.OK);
+        }
 
     }
 }
